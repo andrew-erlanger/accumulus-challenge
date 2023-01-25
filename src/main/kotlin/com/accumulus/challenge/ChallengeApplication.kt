@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.concurrent.atomic.AtomicLong
 
 data class UserToppingsSubmission(val email: String, val topics: List<String>)
-data class ToppingFrequencyMap(val frequencyMap: Map<String, Int>)
+data class ToppingCountMap(val countMap: Map<String, Int>)
 
 class InMemoryDataStore {
 	// Within the class, I don't box types (such as the user email) for simplicity.
@@ -17,12 +17,18 @@ class InMemoryDataStore {
 		emailToppingsMap[submission.email] = submission.topics
 	}
 
+	// This function is used for testing.
 	fun showToppingsMap(): MutableMap<String, List<String>> {
 		return emailToppingsMap
 	}
 
-	fun getToppingsCountMap(): ToppingFrequencyMap {
-		return ToppingFrequencyMap(
+	// As the number of users grows, the `emailToppingsMap` grows linearly, and the time and space
+	// complexity of `getToppingsCountMap` both grow linearly. If we needed to cut down on the
+	// time complexity, we could persist the `ToppingsCountMap` and have the function
+	// `pushUserToppingsSubmission` update the `ToppingsCountMap` on-the-fly. For simplicity's
+	// sake, here I simply compute the `ToppingsCountMap` each time.
+	fun getToppingsCountMap(): ToppingCountMap {
+		return ToppingCountMap(
 			emailToppingsMap
 			.flatMap { it.value }
 			.groupingBy { it }
@@ -52,7 +58,6 @@ class ChallengeApplication
 
 fun main(args: Array<String>) {
 	//runApplication<ChallengeApplication>(*args)
-	//print(PersonToppingsChoice("Bob", listOf("cheese", "pepperoni")))
 	val dataStore = InMemoryDataStore()
 	dataStore.pushUserToppingsSubmission(UserToppingsSubmission("foo@com.com", listOf("a", "b", "c")))
 	dataStore.pushUserToppingsSubmission(UserToppingsSubmission("bar@com.com", listOf("a", "c")))
