@@ -7,12 +7,16 @@ import org.springframework.web.bind.annotation.*
 data class UserToppingsSubmission(val email: String, val toppings: List<String>)
 data class ToppingCountMap(val toppingCountMap: Map<String, Int>)
 
+// Here I define a data structure to keep track of the user submissions, along with methods
+// operating on the structure.
 object InMemoryDataStore {
 	// Within the class, I don't box types (such as the user email) for simplicity.
 	private val emailToppingsMap: MutableMap<String, List<String>> = mutableMapOf()
 
 	fun pushUserToppingsSubmission(submission: UserToppingsSubmission) {
-		emailToppingsMap[submission.email] = submission.toppings
+		// We use lowercase because email addresses are not case-sensitive.
+		// No other validation or standardization is applied to the email or toppings.
+		emailToppingsMap[submission.email.lowercase()] = submission.toppings
 	}
 
 	// This function is used for testing only.
@@ -53,9 +57,8 @@ class ChallengeController {
 	@PostMapping("/userToppingSubmission")
 	fun userToppingSubmission(@RequestBody submission: UserToppingsSubmission): String {
 		InMemoryDataStore.pushUserToppingsSubmission(submission)
-		return "Ok"
+		return "Ok" // standard 200 response
 	}
-
 }
 
 @SpringBootApplication
