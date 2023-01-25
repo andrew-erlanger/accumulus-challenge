@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.concurrent.atomic.AtomicLong
 
 data class UserToppingsSubmission(val email: String, val topics: List<String>)
+data class ToppingFrequencyMap(val frequencyMap: Map<String, Int>)
 
 class InMemoryDataStore {
 	// Within the class, I don't box types (such as the user email) for simplicity.
@@ -20,9 +21,12 @@ class InMemoryDataStore {
 		return emailToppingsMap
 	}
 
-	fun getToppingsCountMap(): List<String> {
-		return emailToppingsMap
+	fun getToppingsCountMap(): ToppingFrequencyMap {
+		return ToppingFrequencyMap(
+			emailToppingsMap
 			.flatMap { it.value }
+			.groupingBy { it }
+			.eachCount())
 	}
 }
 
@@ -54,4 +58,5 @@ fun main(args: Array<String>) {
 	dataStore.pushUserToppingsSubmission(UserToppingsSubmission("bar@com.com", listOf("a", "c")))
 	dataStore.pushUserToppingsSubmission(UserToppingsSubmission("baz@com.com", listOf("c")))
 	println(dataStore.showToppingsMap())
+	println(dataStore.getToppingsCountMap())
 }
