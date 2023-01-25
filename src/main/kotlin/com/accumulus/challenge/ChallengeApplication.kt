@@ -1,25 +1,28 @@
 package com.accumulus.challenge
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.bind.annotation.RestController
-import java.util.concurrent.atomic.AtomicLong
+import org.springframework.boot.runApplication
+import org.springframework.web.bind.annotation.*
 
-data class UserToppingsSubmission(val email: String, val topics: List<String>)
-data class ToppingCountMap(val countMap: Map<String, Int>)
+data class UserToppingsSubmission(val email: String, val toppings: List<String>)
+data class ToppingCountMap(val toppingCountMap: Map<String, Int>)
 
-class InMemoryDataStore {
+object InMemoryDataStore {
 	// Within the class, I don't box types (such as the user email) for simplicity.
 	private val emailToppingsMap: MutableMap<String, List<String>> = mutableMapOf()
 
 	fun pushUserToppingsSubmission(submission: UserToppingsSubmission) {
-		emailToppingsMap[submission.email] = submission.topics
+		emailToppingsMap[submission.email] = submission.toppings
 	}
 
-	// This function is used for testing.
+	// This function is used for testing only.
 	fun showToppingsMap(): MutableMap<String, List<String>> {
 		return emailToppingsMap
+	}
+
+	// This function allows for resetting the application state without restarting.
+	fun clearToppingsMap() {
+		emailToppingsMap.clear()
 	}
 
 	// As the number of users grows, the `emailToppingsMap` grows linearly, and the time and space
@@ -27,7 +30,7 @@ class InMemoryDataStore {
 	// time complexity, we could persist the `ToppingsCountMap` and have the function
 	// `pushUserToppingsSubmission` update the `ToppingsCountMap` on-the-fly. For simplicity's
 	// sake, here I simply compute the `ToppingsCountMap` each time.
-	fun getToppingsCountMap(): ToppingCountMap {
+	fun getToppingCountMap(): ToppingCountMap {
 		return ToppingCountMap(
 			emailToppingsMap
 			.flatMap { it.value }
@@ -36,32 +39,28 @@ class InMemoryDataStore {
 	}
 }
 
-////////////////////////////////////////////////
-// demo code below this line
-data class Greeting(val id: Long, val content: String)
-
 @RestController
-class GreetingController {
-	private val counter = AtomicLong()
-	@GetMapping("/greeting")
-	fun greeting(@RequestParam(value = "name", defaultValue = "World") name: String?): Greeting {
-		return Greeting(counter.incrementAndGet(), String.format(template, name))
+class ChallengeController {
+	@GetMapping("/toppingCountMap")
+	fun toppingCountMap(): ToppingCountMap {
+		return InMemoryDataStore.getToppingCountMap()
 	}
 
-	companion object {
-		private const val template = "Hello, %s!"
+	// We treat the ToppingCountMap as a resource, implementing a delete method.
+	@DeleteMapping("/toppingCountMap")
+	fun clearToppingCountMap() = InMemoryDataStore.clearToppingsMap()
+
+	@PostMapping("/userToppingSubmission")
+	fun userToppingSubmission(@RequestBody submission: UserToppingsSubmission): String {
+		InMemoryDataStore.pushUserToppingsSubmission(submission)
+		return "Ok"
 	}
+
 }
 
 @SpringBootApplication
 class ChallengeApplication
 
 fun main(args: Array<String>) {
-	//runApplication<ChallengeApplication>(*args)
-	val dataStore = InMemoryDataStore()
-	dataStore.pushUserToppingsSubmission(UserToppingsSubmission("foo@com.com", listOf("a", "b", "c")))
-	dataStore.pushUserToppingsSubmission(UserToppingsSubmission("bar@com.com", listOf("a", "c")))
-	dataStore.pushUserToppingsSubmission(UserToppingsSubmission("baz@com.com", listOf("c")))
-	println(dataStore.showToppingsMap())
-	println(dataStore.getToppingsCountMap())
+	runApplication<ChallengeApplication>(*args)
 }
